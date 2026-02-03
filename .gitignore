@@ -1,0 +1,77 @@
+####################################
+# OS files
+####################################
+.DS_Store
+Thumbs.db
+
+####################################
+# IDE / Editor
+####################################
+.vscode/
+.idea/
+*.iml
+
+####################################
+# ENV / SECRETS (VERY IMPORTANT)
+####################################
+.env
+.env.*
+backend/.env
+frontend/.env
+
+####################################
+# Flutter (Frontend)
+####################################
+frontend/.dart_tool/
+frontend/.packages
+frontend/.pub/
+frontend/build/
+
+####################################
+# Flutter platform builds
+####################################
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/ios/Pods/
+frontend/ios/Runner.xcworkspace/
+frontend/ios/Flutter/App.framework
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Generated.xcconfig
+frontend/ios/Flutter/ephemeral/
+frontend/macos/Flutter/ephemeral/
+frontend/windows/flutter/ephemeral/
+frontend/linux/flutter/ephemeral/
+
+####################################
+# Python / FastAPI (Backend)
+####################################
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+####################################
+# Python virtual environments
+####################################
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+
+####################################
+# Logs
+####################################
+*.log
+
+####################################
+# Test / Coverage
+####################################
+htmlcov/
+.coverage
+coverage/
+
+####################################
+# Node (if ever used)
+####################################
+node_modules/
