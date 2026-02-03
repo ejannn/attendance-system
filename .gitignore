@@ -75,3 +75,4 @@ coverage/
 # Node (if ever used)
 ####################################
 node_modules/
+attendance_app/.metadata
