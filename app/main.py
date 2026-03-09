@@ -13,10 +13,11 @@ models.Base.metadata.create_all(bind=engine)
 
 app.include_router(users.router)
 app.include_router(attendance.router)
-app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(admin.router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # allow all (dev only)
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],)
+    allow_headers=["*"],
+)

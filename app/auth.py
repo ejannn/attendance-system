@@ -1,5 +1,4 @@
 from fastapi import Depends, HTTPException, status
-
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
@@ -12,11 +11,12 @@ from .database import get_db
 from .models import User
 
 # ================= JWT SETTINGS =================
-SECRET_KEY = "your_secret_key_here_change_this"
+SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")  # ← from env
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+
 
 # ================= PASSWORD HASHING =================
 def hash_password(password: str) -> str:
@@ -29,8 +29,13 @@ def hash_password(password: str) -> str:
     )
     return salt.hex() + ":" + pwd_hash.hex()
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    salt_hex, hash_hex = hashed_password.split(":")
+    try:
+        salt_hex, hash_hex = hashed_password.split(":")
+    except ValueError:
+        return False  # ← guard against malformed hash
+
     salt = bytes.fromhex(salt_hex)
     expected_hash = bytes.fromhex(hash_hex)
 
@@ -43,65 +48,66 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
     return hmac.compare_digest(pwd_hash, expected_hash)
 
+
 # ================= TOKEN =================
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(user: User, expires_delta: timedelta | None = None) -> str:
     """
-    Creates a JWT token. The `data` dict can include roles, e.g.:
-    {"sub": username, "role": "admin"}
+    Creates a JWT token with permissions embedded.
+    Permissions are read once at login — no DB hit on every request.
     """
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    permissions = [p.name for p in user.role.permissions]  # ← embed permissions
+
+    payload = {
+        "sub": user.username,
+        "user_id": user.id,
+        "role": user.role.name,
+        "permissions": permissions,  # ← key addition
+        "exp": datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    }
+
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 # ================= CURRENT USER =================
+class TokenData:
+    """Holds the decoded token payload — avoids repeated DB hits."""
+    def __init__(self, payload: dict):
+        self.username: str = payload.get("sub")
+        self.user_id: int = payload.get("user_id")
+        self.role: str = payload.get("role")
+        self.permissions: set[str] = set(payload.get("permissions", []))
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
-):
+) -> User:
     """
-    Returns the current logged-in user object.
+    Decodes the JWT and returns the User object.
+    Permissions are already in the token — no extra DB query needed for auth checks.
     """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        role: str = payload.get("role")  # optional, from token
-        if not username:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        token_data = TokenData(payload)
 
-    user = db.query(User).filter(User.username == username).first()
+        if not token_data.username:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(User).filter(User.username == token_data.username).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise credentials_exception
+
+    # ← Attach token permissions to the user object so require_permission()
+    #   can read them without another DB query
+    user._token_permissions = token_data.permissions
 
     return user
-
-# ================= ROLE-BASED AUTH =================
-def require_role(required_role: str):
-    """
-    Dependency to protect routes by role.
-    Usage:
-        @app.get("/admin")
-        def admin_route(current_user: User = Depends(require_role("admin"))):
-            return {"msg": "Welcome admin!"}
-    """
-    def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role != required_role:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to access this resource"
-            )
-        return current_user
-    return role_checker
-
-
-
-
-def require_admin(current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Admin access required"
-        )
-    return current_user
