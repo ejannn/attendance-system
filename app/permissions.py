@@ -5,3 +5,4 @@ class Permissions:
     VIEW_OWN_ATTENDANCE = "view_own_attendance"
     VIEW_ALL_ATTENDANCE = "view_all_attendance"
     MANAGE_USERS        = "manage_users"
+   

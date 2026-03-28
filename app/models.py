@@ -3,7 +3,7 @@ import enum
 from sqlalchemy import Column, Enum, Integer, String, DateTime, ForeignKey , Date, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from .database import Base
+from app.core.database import Base
 from sqlalchemy.sql import func
 
 
@@ -59,3 +59,5 @@ class Attendance(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "date", name="uq_user_attendance_date"),  # ← prevent duplicates
     )
+
+
