@@ -1,8 +1,8 @@
 # app/seed.py
-from app.database import SessionLocal, engine
-from app.models import Base, Role, Permission, RolePermission, User
+from app.core.database import SessionLocal, engine, Base
+from app.models import Role, Permission, User, Attendance, AttendanceStatus, RolePermission
 from app.permissions import Permissions
-from app.auth import hash_password
+from app.core.security import hash_password
 
 ROLE_PERMISSIONS = {
     "admin": {

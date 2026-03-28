@@ -7,8 +7,8 @@ import hashlib
 import os
 import hmac
 
-from .database import get_db
-from .models import User
+from app.core.database import get_db
+from app.models import User
 
 # ================= JWT SETTINGS =================
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")  # ← from env
